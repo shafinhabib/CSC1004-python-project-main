@@ -6,9 +6,8 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
-
+import matplotlib.pyplot as plt
 from utils.config_utils import read_args, load_config, Dict2Object
-
 
 class Net(nn.Module):
     def __init__(self):
@@ -78,12 +77,13 @@ def train(args, model, device, train_loader, optimizer, epoch):
     return training_acc, training_loss
 
 
-def test(model, device, test_loader):
+def test(model, device, test_loader, filename, epoch):
     """
-    test the model and return the tesing accuracy
+    test the model and return the testing accuracy
     :param model: neural network model
     :param device: the device where model stored
     :param test_loader: data loader
+    :param filename: the name of the file to which to write the testing results
     :return:
     """
     model.eval()
@@ -91,21 +91,31 @@ def test(model, device, test_loader):
     correct = 0
     with torch.no_grad():
         for data, target in test_loader:
-            '''Fill your code'''
-            pass
-    testing_acc, testing_loss = None, None  # replace this line
+            data, target = data.to(device), target.to(device)
+            output = model(data)
+            test_loss += F.nll_loss(output, target, reduction='sum').item()  # sum up batch loss
+            pred = output.argmax(dim=1, keepdim=True)  # get the index of the max log-probability
+            correct += pred.eq(target.view_as(pred)).sum().item()
+
+        test_loss /= len(test_loader.dataset)
+
+        # write the current testing accuracy and loss to the file
+        with open(filename, 'a') as f:
+            f.write(f"Epoch {epoch}, Testing accuracy: {(100. * correct / len(test_loader.dataset)):.2f}%, "
+                    f"Testing loss: {test_loss:.4f}\n")
+
+    testing_acc = 100. * correct / len(test_loader.dataset)
+    testing_loss = test_loss
     return testing_acc, testing_loss
 
 
-def plot(epoches, performance):
-    """
-    plot the model peformance
-    :param epoches: recorded epoches
-    :param performance: recorded performance
-    :return:
-    """
-    """Fill your code"""
-    pass
+def plot(title, xlabel, ylabel, xdata, ydata):
+    plt.figure()
+    plt.title(title)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.plot(xdata, ydata)
+    plt.show()
 
 
 def run(config):
@@ -155,30 +165,30 @@ def run(config):
     for epoch in range(1, config.epochs + 1):
         train_acc, train_loss = train(config, model, device, train_loader, optimizer, epoch)
         """record training info, Fill your code"""
-        test_acc, test_loss = test(model, device, test_loader)
+        test_acc, test_loss = test(model, device, test_loader, epoch)
         """record testing info, Fill your code"""
         scheduler.step()
         """update the records, Fill your code"""
 
     """plotting training performance with the records"""
-    plot(epoches, training_loss)
+    plot("Training Accuracy", "Epoch", "Accuracy (%)", epoches, training_accuracies)
+    plot("Training Loss", "Epoch", "Loss", epoches, training_loss)
 
     """plotting testing performance with the records"""
-    plot(epoches, testing_accuracies)
-    plot(epoches, testing_loss)
+    plot("Testing Accuracy", "Epoch", "Accuracy (%)", epoches, testing_accuracies)
+    plot("Testing Loss", "Epoch", "Loss", epoches, testing_loss)
 
     if config.save_model:
         torch.save(model.state_dict(), "mnist_cnn.pt")
 
 
-def plot_mean():
-    """
-    Read the recorded results.
-    Plot the mean results after three runs.
-    :return:
-    """
-    """fill your code"""
-
+def plot(title, xlabel, ylabel, xdata, ydata):
+    plt.figure()
+    plt.title(title)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.plot(xdata, ydata)
+    plt.show()
 
 if __name__ == '__main__':
     arg = read_args()
@@ -190,4 +200,4 @@ if __name__ == '__main__':
     run(config)
 
     """plot the mean results"""
-    plot_mean()
+    # plot_mean()
