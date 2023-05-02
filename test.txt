@@ -1,0 +1,15 @@
+Training: epoch 1 | loss: 0.7307 | accuracy: 78.78
+Training: epoch 2 | loss: 0.3552 | accuracy: 89.53
+Training: epoch 3 | loss: 0.3021 | accuracy: 91.12
+Training: epoch 4 | loss: 0.2730 | accuracy: 91.91
+Training: epoch 5 | loss: 0.2565 | accuracy: 92.42
+Training: epoch 6 | loss: 0.2473 | accuracy: 92.70
+Training: epoch 7 | loss: 0.2420 | accuracy: 92.92
+Training: epoch 8 | loss: 0.2347 | accuracy: 93.17
+Training: epoch 9 | loss: 0.2297 | accuracy: 93.28
+Training: epoch 10 | loss: 0.2307 | accuracy: 93.17
+Training: epoch 11 | loss: 0.2278 | accuracy: 93.25
+Training: epoch 12 | loss: 0.2256 | accuracy: 93.26
+Training: epoch 13 | loss: 0.2263 | accuracy: 93.37
+Training: epoch 14 | loss: 0.2257 | accuracy: 93.36
+Training: epoch 15 | loss: 0.2269 | accuracy: 93.41
