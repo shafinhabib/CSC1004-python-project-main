@@ -1,5 +1,6 @@
 from __future__ import print_function
 import argparse
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -8,6 +9,7 @@ from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
 import matplotlib.pyplot as plt
 from utils.config_utils import read_args, load_config, Dict2Object
+import multiprocessing as mp
 
 class Net(nn.Module):
     def __init__(self):
@@ -68,7 +70,7 @@ def train(args, model, device, train_loader, optimizer, epoch):
     training_loss = loss_value / len(train_loader)
 
     # Write to log file
-    with open("test.txt", "a") as f:
+    with open("train.txt", "a") as f:
         f.write(f"Training: epoch {epoch} | loss: {training_loss:.4f} | accuracy: {training_acc:.2f}\n")
 
     # Print training accuracy and loss
@@ -77,7 +79,7 @@ def train(args, model, device, train_loader, optimizer, epoch):
     return training_acc, training_loss
 
 
-def test(model, device, test_loader, filename, epoch):
+def test(model, device, test_loader, epoch):
     """
     test the model and return the testing accuracy
     :param model: neural network model
@@ -99,24 +101,25 @@ def test(model, device, test_loader, filename, epoch):
 
         test_loss /= len(test_loader.dataset)
 
-        # write the current testing accuracy and loss to the file
-        with open(filename, 'a') as f:
+        #write the current testing accuracy and loss to the file
+        with open("test.txt", 'a') as f:
             f.write(f"Epoch {epoch}, Testing accuracy: {(100. * correct / len(test_loader.dataset)):.2f}%, "
                     f"Testing loss: {test_loss:.4f}\n")
 
     testing_acc = 100. * correct / len(test_loader.dataset)
     testing_loss = test_loss
+    print(f"Testing: epoch {epoch} | loss: {testing_loss:.4f} | accuracy: {testing_acc:.2f}")
+
     return testing_acc, testing_loss
 
 
 def plot(title, xlabel, ylabel, xdata, ydata):
-    plt.figure()
+    # plt.figure()
+    plt.plot(xdata, ydata, marker = "o")
     plt.title(title)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
-    plt.plot(xdata, ydata)
     plt.show()
-
 
 def run(config):
     use_cuda = not config.no_cuda and torch.cuda.is_available()
@@ -155,7 +158,7 @@ def run(config):
     optimizer = optim.Adadelta(model.parameters(), lr=config.lr)
 
     """record the performance"""
-    epoches = []
+    epoches = [i+1 for i in range(config.epochs)]
     training_accuracies = []
     training_loss = []
     testing_accuracies = []
@@ -169,35 +172,67 @@ def run(config):
         """record testing info, Fill your code"""
         scheduler.step()
         """update the records, Fill your code"""
+        training_accuracies.append(train_acc)
+        training_loss.append(train_loss)
+        testing_accuracies.append(test_acc)
+        testing_loss.append(test_loss)
 
     """plotting training performance with the records"""
-    plot("Training Accuracy", "Epoch", "Accuracy (%)", epoches, training_accuracies)
+    # plot("Training Accuracy", "Epoch", "Accuracy (%)", epoches, training_accuracies)
     plot("Training Loss", "Epoch", "Loss", epoches, training_loss)
 
     """plotting testing performance with the records"""
-    plot("Testing Accuracy", "Epoch", "Accuracy (%)", epoches, testing_accuracies)
     plot("Testing Loss", "Epoch", "Loss", epoches, testing_loss)
+    plot("Testing Accuracy", "Epoch", "Accuracy (%)", epoches, testing_accuracies)
 
+
+
+    mean_training_loss = np.mean(training_loss)
+    mean_testing_loss = np.mean(testing_loss)
+    mean_testing_accuracy = np.mean(testing_accuracies)
+
+    plt.figure()
+    plt.plot(training_loss, label='Training Loss')
+    plt.plot(testing_loss, label='Testing Loss')
+    plt.plot(testing_accuracies, label='Testing Accuracy')
+    plt.axhline(y=mean_training_loss, color='r', linestyle='--', label=f'Mean Training Loss: {mean_training_loss:.4f}')
+    plt.axhline(y=mean_testing_loss, color='g', linestyle='--', label=f'Mean Testing Loss: {mean_testing_loss:.4f}')
+    plt.axhline(y=mean_testing_accuracy, color='b', linestyle='--', label=f'Mean Testing Accuracy: {mean_testing_accuracy:.2f}%')
+    plt.title(f'Training and Testing Performance')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss / Accuracy')
+    plt.legend()
+    plt.show()
+    # plt.title('Training and Testing Performance')
+    # plt.xlabel('Epoch')
+    # plt.ylabel('Loss / Accuracy')
+    # plt.legend()
     if config.save_model:
         torch.save(model.state_dict(), "mnist_cnn.pt")
 
+def main(config, seed):
+    # Set the random seed for the process
+    config.seed = seed
 
-def plot(title, xlabel, ylabel, xdata, ydata):
-    plt.figure()
-    plt.title(title)
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    plt.plot(xdata, ydata)
-    plt.show()
+    # Call the run function with the updated configuration
+    run(config)
 
 if __name__ == '__main__':
     arg = read_args()
 
-    """toad training settings"""
+    # Load training settings
     config = load_config(arg)
 
-    """train model and record results"""
-    run(config)
+    # Create a list of random seeds for each process
+    # seeds = [config.seed, config.seed + 1, config.seed + 2]
 
-    """plot the mean results"""
-    # plot_mean()
+    # Create a list of processes
+    processes = [mp.Process(target=main, args=(config, seed)) for seed in config.seed]
+
+    # Start each process
+    for p in processes:
+        p.start()
+
+    # Wait for each process to finish
+    for p in processes:
+        p.join()
