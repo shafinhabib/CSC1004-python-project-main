@@ -5,11 +5,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+import matplotlib.pyplot as plt
+import multiprocessing as mp
 from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
-import matplotlib.pyplot as plt
 from utils.config_utils import read_args, load_config, Dict2Object
-import multiprocessing as mp
 
 class Net(nn.Module):
     def __init__(self):
@@ -114,7 +114,6 @@ def test(model, device, test_loader, epoch):
 
 
 def plot(title, xlabel, ylabel, xdata, ydata):
-    # plt.figure()
     plt.plot(xdata, ydata, marker = "o")
     plt.title(title)
     plt.xlabel(xlabel)
@@ -178,13 +177,11 @@ def run(config):
         testing_loss.append(test_loss)
 
     """plotting training performance with the records"""
-    # plot("Training Accuracy", "Epoch", "Accuracy (%)", epoches, training_accuracies)
     plot("Training Loss", "Epoch", "Loss", epoches, training_loss)
 
     """plotting testing performance with the records"""
     plot("Testing Loss", "Epoch", "Loss", epoches, testing_loss)
     plot("Testing Accuracy", "Epoch", "Accuracy (%)", epoches, testing_accuracies)
-
 
 
     mean_training_loss = np.mean(training_loss)
@@ -203,10 +200,7 @@ def run(config):
     plt.ylabel('Loss / Accuracy')
     plt.legend()
     plt.show()
-    # plt.title('Training and Testing Performance')
-    # plt.xlabel('Epoch')
-    # plt.ylabel('Loss / Accuracy')
-    # plt.legend()
+
     if config.save_model:
         torch.save(model.state_dict(), "mnist_cnn.pt")
 
@@ -222,9 +216,6 @@ if __name__ == '__main__':
 
     # Load training settings
     config = load_config(arg)
-
-    # Create a list of random seeds for each process
-    # seeds = [config.seed, config.seed + 1, config.seed + 2]
 
     # Create a list of processes
     processes = [mp.Process(target=main, args=(config, seed)) for seed in config.seed]
